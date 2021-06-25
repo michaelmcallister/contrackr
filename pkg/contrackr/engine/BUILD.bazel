@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "engine",
+    srcs = [
+        "capturer.go",
+        "engine.go",
+        "iptables.go",
+        "parser.go",
+        "tracker.go",
+    ],
+    importpath = "github.com/michaelmcallister/contrackr/pkg/contrackr/engine",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_coreos_go_iptables//iptables:go_default_library",
+        "@com_github_golang_glog//:go_default_library",
+        "@com_github_google_gopacket//:go_default_library",
+        "@com_github_google_gopacket//layers:go_default_library",
+        "@com_github_google_gopacket//pcap:go_default_library",
+    ],
+)
