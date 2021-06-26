@@ -1,4 +1,32 @@
 load("@bazel_gazelle//:def.bzl", "gazelle")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+load("@package_bundle//file:packages.bzl", "packages")
 
 # gazelle:prefix github.com/michaelmcallister/contrackr
 gazelle(name = "gazelle")
+
+container_image(
+    name = "contrackr_image",
+    base = "@base//image",
+    debs = [
+        packages["iptables"],
+        packages["libip4tc0"],
+        packages["libip6tc0"],
+        packages["libiptc0"],
+        packages["libnetfilter-conntrack3"],
+        packages["libnfnetlink0"],
+        packages["libxtables12"],
+        packages["libpcap0.8"],
+    ],
+    entrypoint = [
+        "./contrackr",
+        "-logtostderr=true",
+    ],
+    files = ["//cmd:contrackr"],
+    symlinks = {
+        "/usr/sbin/iptables": "/usr/sbin/iptables-legacy",
+        "/usr/sbin/ip6tables": "/usr/sbin/ip6tables-legacy",
+        "/usr/lib/x86_64-linux-gnu/libpcap.so.1": "/usr/lib/x86_64-linux-gnu/libpcap.so.0.8",
+    },
+)

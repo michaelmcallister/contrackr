@@ -1,4 +1,5 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
     name = "io_bazel_rules_go",
@@ -18,8 +19,27 @@ http_archive(
     ],
 )
 
+http_archive(
+    name = "io_bazel_rules_docker",
+    sha256 = "59d5b42ac315e7eadffa944e86e90c2990110a1c8075f1cd145f487e999d22b3",
+    strip_prefix = "rules_docker-0.17.0",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.17.0/rules_docker-v0.17.0.tar.gz"],
+)
+
+git_repository(
+    name = "distroless",
+    commit = "fd0d99e8c54d7d7b2f3dd29f5093d030d192cbbc",
+    remote = "https://github.com/GoogleContainerTools/distroless",
+    shallow_since = "1582213526 -0500",
+)
+
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+
+## The below is managed by gazelle.
+## If you are changing/adding Go dependencies just run the below command 
+## to automatically add the dependencies.
+## bazel run //:gazelle -- update -from_file=go.mod
 
 go_repository(
     name = "com_github_coreos_go_iptables",
@@ -110,3 +130,68 @@ go_rules_dependencies()
 go_register_toolchains(version = "1.16")
 
 gazelle_dependencies()
+
+load(
+    "@io_bazel_rules_docker//repositories:repositories.bzl",
+    container_repositories = "repositories",
+)
+
+container_repositories()
+
+load(
+    "@io_bazel_rules_docker//go:image.bzl",
+    _go_image_repos = "repositories",
+)
+
+_go_image_repos()
+
+load(
+    "@io_bazel_rules_docker//container:container.bzl",
+    "container_pull",
+)
+
+container_pull(
+    name = "base",
+    digest = "sha256:2f4a6ca7bdf2a532473610a46b2900e94c9c987925bff20603ba087ac6d919f7",
+    registry = "index.docker.io",
+    repository = "library/ubuntu",
+)
+
+load("@distroless//package_manager:package_manager.bzl", "dpkg_list", "dpkg_src", "package_manager_repositories")
+
+# Copied from https://github.com/GoogleCloudPlatform/distroless/blob/master/WORKSPACE
+package_manager_repositories()
+
+dpkg_src(
+    name = "debian_buster",
+    arch = "amd64",
+    distro = "buster",
+    sha256 = "b044c73a46671536011a26aedd8490dd31140538264ac12f26dc6dd0b4f0fcb8",
+    snapshot = "20210601T022916Z",
+    url = "https://snapshot.debian.org/archive",
+)
+
+dpkg_src(
+    name = "debian_buster_security",
+    package_prefix = "https://snapshot.debian.org/archive/debian-security/20210601T022916Z/",
+    packages_gz_url = "https://snapshot.debian.org/archive/debian-security/20210601T022916Z/dists/buster/updates/main/binary-amd64/Packages.gz",
+    sha256 = "95c73e6151604b8087f027efea11ce5b4fac2391d37c743da08499745d985d91",
+)
+
+dpkg_list(
+    name = "package_bundle",
+    packages = [
+        "iptables",
+        "libip4tc0",
+        "libip6tc0",
+        "libiptc0",
+        "libnetfilter-conntrack3",
+        "libnfnetlink0",
+        "libpcap0.8",
+        "libxtables12",
+    ],
+    sources = [
+        "@debian_buster_security//file:Packages.json",
+        "@debian_buster//file:Packages.json",
+    ],
+)
