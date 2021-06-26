@@ -20,6 +20,7 @@ const (
 	blockAction = "DROP"
 )
 
+// BLocker contains the methods for Blocking IP addresses.
 type Blocker struct {
 	iptables, ip6tables *iptables.IPTables
 }
@@ -65,9 +66,8 @@ func (b *Blocker) Block(v *net.IP) error {
 	isV6 := v.To4() == nil
 	if isV6 {
 		return b.ip6tables.AppendUnique(defaultTable, contrackrChain, rule...)
-	} else {
-		return b.iptables.AppendUnique(defaultTable, contrackrChain, rule...)
 	}
+	return b.iptables.AppendUnique(defaultTable, contrackrChain, rule...)
 }
 
 // Close will cleanup the firewall rules that were created during instantiation.

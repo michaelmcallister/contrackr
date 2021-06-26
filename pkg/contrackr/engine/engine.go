@@ -28,7 +28,7 @@ type BlockCloser interface {
 	Close() error
 }
 
-// Add defines the contract for adding new connections to the tracker, and
+// Adder defines the contract for adding new connections to the tracker, and
 // retrieving those that are considered port scanners.
 type Adder interface {
 	Add(*Connection)
