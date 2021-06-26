@@ -19,5 +19,7 @@ jobs:
         # TODO(michaelmcallister): not sure what key to use here, things might
         # break if it gets executed on multiple hosts.
         key: ${{ runner.os }}-bazel
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install libpcap-dev
     # Build every single target in the project.
     - run: bazel build //...
