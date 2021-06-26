@@ -7,3 +7,6 @@
 .bazelversion
 # User-specific .bazelrc
 user.bazelrc
+
+# coverage
+coverage.txt

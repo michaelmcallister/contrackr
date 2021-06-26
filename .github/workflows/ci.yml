@@ -23,3 +23,14 @@ jobs:
       run: sudo apt-get update && sudo apt-get install libpcap-dev
     # Build every single target in the project.
     - run: bazel build //...
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Generate coverage profile
+    - run: go test -race -coverprofile=coverage.txt -covermode=atomic ./... 
+    - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          file: ./coverage.txt
+          fail_ci_if_error: true
