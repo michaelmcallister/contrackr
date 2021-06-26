@@ -63,7 +63,6 @@ func New(deviceName string) (*Engine, error) {
 
 // Run will monitor and block source IPs that attempt to port scan on the device.
 func (e *Engine) Run() {
-	e.c = e.capturer.Capture()
 	go func() {
 		for v := range e.tracker.PortScanners() {
 			var ports []int
@@ -74,7 +73,7 @@ func (e *Engine) Run() {
 			e.firewall.Block(v.SrcIP)
 		}
 	}()
-	for pkt := range e.c {
+	for pkt := range e.capturer.Capture() {
 		e.tracker.Add(pkt)
 	}
 }
@@ -88,6 +87,5 @@ func (e *Engine) Close() error {
 	if err := e.capturer.Close(); err != nil {
 		closeErr = fmt.Errorf("capturer %v: %w", err, closeErr)
 	}
-	close(e.c)
 	return closeErr
 }

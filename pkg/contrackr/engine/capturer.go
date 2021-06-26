@@ -43,7 +43,8 @@ func interfaceExists(devicename string) bool {
 
 // PacketCapturer implements the io.ReadCloser interface.
 type PacketCapturer struct {
-	h *pcap.Handle
+	h   *pcap.Handle
+	out chan *Connection
 }
 
 // newCapturer accepts a devicename that must exist as a network interface, and
@@ -98,13 +99,13 @@ func newCapturerOffline(file *os.File) (*PacketCapturer, error) {
 // have no TCP header, or do not have SYN flag (or have the SYN + ACK flag set)
 // will be silently dropped.
 func (pc *PacketCapturer) Capture() chan *Connection {
-	out := make(chan *Connection)
+	pc.out = make(chan *Connection)
 	source := gopacket.NewPacketSource(pc.h, pc.h.LinkType())
 	go func() {
 		for {
 			packet, err := source.NextPacket()
 			if err == io.EOF {
-				close(out)
+				close(pc.out)
 				break
 			} else if err != nil {
 				log.Warningf("error reading packet: %v", err)
@@ -141,12 +142,12 @@ func (pc *PacketCapturer) Capture() chan *Connection {
 			}
 
 			if parsedTCP.Src.IP != nil && parsedTCP.Dst.Port != 0 {
-				out <- parsedTCP
+				pc.out <- parsedTCP
 			}
 
 		}
 	}()
-	return out
+	return pc.out
 }
 
 // Close closes the underlying pcap handle. It will always return a nil error.

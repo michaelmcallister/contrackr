@@ -48,8 +48,9 @@ func (fc *fakeCapturer) Capture() chan *Connection {
 	return fc.captureChan
 }
 
-// Close is a no-op.
+// Close closes the capture channel.
 func (fc *fakeCapturer) Close() error {
+	close(fc.captureChan)
 	return nil
 }
 
@@ -71,22 +72,20 @@ func TestEngineBlocksPortScans(t *testing.T) {
 		fakeEngine.Run()
 	}()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		defer fakeEngine.Close()
-		// Send an entry to the portscanner channel.
-		srcIP, dstIP := net.ParseIP("192.168.86.158"), net.ParseIP("192.168.86.191")
-		portscanners <- &TrackerEntry{
-			DstIP: &srcIP,
-			SrcIP: &dstIP,
-			Ports: map[int]int{1992: 1, 7: 1, 9: 1},
-		}
-	}()
+	// Send an entry to the portscanner channel.
+	srcIP, dstIP := net.ParseIP("192.168.86.158"), net.ParseIP("192.168.86.191")
+	portscanners <- &TrackerEntry{
+		DstIP: &srcIP,
+		SrcIP: &dstIP,
+		Ports: map[int]int{1992: 1, 7: 1, 9: 1},
+	}
+
+	fakeEngine.Close()
 	wg.Wait()
 
 	// Test that the engine correctly sent a block request for this entry.
-	if atomic.LoadUint64(&fakeBlocker.blockCalled) != 1 {
-		t.Errorf("Expected block to be called once but was called %d times", fakeBlocker.blockCalled)
+	calls := atomic.LoadUint64(&fakeBlocker.blockCalled)
+	if calls != 1 {
+		t.Errorf("Expected block to be called once but was called %d times", calls)
 	}
 }
