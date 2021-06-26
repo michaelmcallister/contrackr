@@ -32,7 +32,7 @@ type Tracker struct {
 // newTracker takes the maximum age each entry should be tracked for, and
 // the minimum ports scanned before a src IP is considered a "port scanner"
 // and returns an instance of Tracker.
-func newTracker(maxAge time.Duration, minimumPortScanned int) (t *Tracker) {
+func newTracker(maxAge, evaluationInterval time.Duration, minimumPortScanned int) (t *Tracker) {
 	t = &Tracker{
 		portScanners:       make(chan *TrackerEntry),
 		minimumPortScanned: minimumPortScanned,
@@ -40,7 +40,7 @@ func newTracker(maxAge time.Duration, minimumPortScanned int) (t *Tracker) {
 		m:                  make(map[string]*TrackerEntry),
 	}
 	go func() {
-		for now := range time.Tick(time.Second) {
+		for now := range time.Tick(evaluationInterval) {
 			t.l.Lock()
 			for k, v := range t.m {
 				if now.After(v.expiry) {
@@ -83,4 +83,8 @@ func (t *Tracker) Add(v *Connection) {
 // scan multiple ports.
 func (t *Tracker) PortScanners() chan *TrackerEntry {
 	return t.portScanners
+}
+
+func (t *Tracker) Close() {
+	close(t.portScanners)
 }

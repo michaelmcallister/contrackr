@@ -10,7 +10,10 @@ import (
 
 const (
 	minimumPortScanned = 3
-	trackerEntryTTL    = 1 * time.Minute
+	// how long do entries get tracked for.
+	trackerEntryTTL = 1 * time.Minute
+	// how often do we evaluate our entries (ideally more often than entry TTL)
+	evaluationInterval = 1 * time.Second
 )
 
 // CaptureCloser defines the contract for capturing packets from an interface.
@@ -54,7 +57,7 @@ func New(deviceName string) (*Engine, error) {
 	return &Engine{
 		capturer: cap,
 		firewall: fw,
-		tracker:  newTracker(trackerEntryTTL, minimumPortScanned),
+		tracker:  newTracker(trackerEntryTTL, evaluationInterval, minimumPortScanned),
 	}, nil
 }
 
