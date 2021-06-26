@@ -17,7 +17,32 @@ import (
 const captureBytes = 80
 
 // bpfFilter is the BPF filter that is used to capture TCP SYN packets.
-const bpfFilter = "tcp[tcpflags] == tcp-syn"
+// I did not know until writing this, but wireshark (libpcap?) does not support
+// the syntactic sugar that IPv4 does, so we must inspect the packet data.
+// We go 13 bytes into the TCP header + 40 bytes for the leading IPv6 header
+// and we check to see if the SYN flag is set.
+// TCP Header format is as such:
+// -----------------------------------------------------------------
+//     0                   1                   2                   3
+// 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |          Source Port          |       Destination Port        |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                        Sequence Number                        |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                    Acknowledgment Number                      |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |  Data |           |U|A|P|R|S|F|                               |
+// | Offset| Reserved  |R|C|S|S|Y|I|            Window             |
+// |       |           |G|K|H|T|N|N|                               |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |           Checksum            |         Urgent Pointer        |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                    Options                    |    Padding    |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                             data                              |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+const bpfFilter = "tcp[tcpflags] == tcp-syn or ip6[13+40]&0x2!=0"
 
 type Connection struct {
 	Src *net.TCPAddr

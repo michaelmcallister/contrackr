@@ -33,6 +33,7 @@ type BlockCloser interface {
 type Adder interface {
 	Add(*Connection)
 	PortScanners() chan *TrackerEntry
+	Close()
 }
 
 // Engine contains the methods for running the connection tracker and blocker.
@@ -80,11 +81,12 @@ func (e *Engine) Run() {
 // Close cleans up any dependencies.
 func (e *Engine) Close() error {
 	var closeErr error
-	if err := e.firewall.Close(); err != nil {
-		closeErr = fmt.Errorf("firewall %v", err)
-	}
 	if err := e.capturer.Close(); err != nil {
 		closeErr = fmt.Errorf("capturer %v: %w", err, closeErr)
 	}
+	if err := e.firewall.Close(); err != nil {
+		closeErr = fmt.Errorf("firewall %v", err)
+	}
+	e.tracker.Close()
 	return closeErr
 }

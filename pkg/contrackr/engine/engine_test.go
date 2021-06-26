@@ -3,18 +3,17 @@ package engine
 import (
 	"net"
 	"sync"
-	"sync/atomic"
 	"testing"
 )
 
 // fakeBlocker implements the BlockCloser interface.
 type fakeBlocker struct {
-	blockCalled uint64
+	blockCalled chan bool
 }
 
 // Block will track whether it has been called, returning a nil error always.
 func (fb *fakeBlocker) Block(_ *net.IP) error {
-	atomic.AddUint64(&fb.blockCalled, 1)
+	fb.blockCalled <- true
 	return nil
 }
 
@@ -37,6 +36,11 @@ func (ft *fakeTracker) PortScanners() chan *TrackerEntry {
 	return ft.tc
 }
 
+// Close closes the underlying channel.
+func (ft *fakeTracker) Close() {
+	close(ft.tc)
+}
+
 // fakeCapturer implements the CaptureCloser interface.
 type fakeCapturer struct {
 	captureChan chan *Connection
@@ -57,7 +61,7 @@ func (fc *fakeCapturer) Close() error {
 func TestEngineBlocksPortScans(t *testing.T) {
 	// Entries added to this channel are considered "port scanners"
 	portscanners := make(chan *TrackerEntry)
-	fakeBlocker := &fakeBlocker{}
+	fakeBlocker := &fakeBlocker{blockCalled: make(chan bool)}
 	fakeEngine := &Engine{
 		capturer: &fakeCapturer{captureChan: make(chan *Connection)},
 		firewall: fakeBlocker,
@@ -80,12 +84,14 @@ func TestEngineBlocksPortScans(t *testing.T) {
 		Ports: map[int]int{1992: 1, 7: 1, 9: 1},
 	}
 
-	fakeEngine.Close()
+	ok := <-fakeBlocker.blockCalled
+	if ok {
+		fakeEngine.Close()
+	}
 	wg.Wait()
 
 	// Test that the engine correctly sent a block request for this entry.
-	calls := atomic.LoadUint64(&fakeBlocker.blockCalled)
-	if calls != 1 {
-		t.Errorf("Expected block to be called once but was called %d times", calls)
+	if !ok {
+		t.Errorf("Expected Block() method to be called but wasn't")
 	}
 }
