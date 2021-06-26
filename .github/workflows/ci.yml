@@ -1,0 +1,22 @@
+name: "build"
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    steps:
+    - uses: actions/checkout@v2
+    - uses: bazelbuild/setup-bazelisk@v1
+    - name: Mount bazel cache
+      uses: actions/cache@v2
+      with:
+        path: "~/.cache/bazel"
+        # TODO(michaelmcallister): not sure what key to use here, things might
+        # break if it gets executed on multiple hosts.
+        key: ${{ runner.os }}-bazel
+    # Build every single target in the project.
+    - run: bazel build //...
