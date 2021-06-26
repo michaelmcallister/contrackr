@@ -2,8 +2,13 @@ package engine
 
 import (
 	"fmt"
+	"io"
+	"net"
+	"os"
 
 	log "github.com/golang/glog"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 )
 
@@ -13,6 +18,11 @@ const captureBytes = 80
 
 // bpfFilter is the BPF filter that is used to capture TCP SYN packets.
 const bpfFilter = "tcp[tcpflags] == tcp-syn"
+
+type Connection struct {
+	Src *net.TCPAddr
+	Dst *net.TCPAddr
+}
 
 // interfaceExists returns true when devicename is found as an interface on the
 // running system, else false.
@@ -65,17 +75,78 @@ func newCapturer(devicename string) (*PacketCapturer, error) {
 	if err := h.SetDirection(pcap.DirectionIn); err != nil {
 		return nil, err
 	}
+	return &PacketCapturer{h: h}, nil
+}
+
+// newCapturerOffline accepts a instance of os.File and attempts to read the
+// packet data, returning an instance of PacketCapturer if successful, else
+// error.
+func newCapturerOffline(file *os.File) (*PacketCapturer, error) {
+	h, err := pcap.OpenOfflineFile(file)
+	if err != nil {
+		return nil, err
+	}
 	if err := h.SetBPFFilter(bpfFilter); err != nil {
 		return nil, err
 	}
 	return &PacketCapturer{h: h}, nil
 }
 
-// Read reads up to len(p) bytes of captured packets into p.
-func (pc *PacketCapturer) Read(p []byte) (int, error) {
-	b, _, err := pc.h.ZeroCopyReadPacketData()
-	copy(p, b)
-	return len(p), err
+// Parse will read from the supplied packet source and return a channel that
+// will be populated with pointers to Connection that contain the Src and Dst
+// IP:Port tuples of the inbound TCP packet. Packets that cannot be decoded,
+// have no TCP header, or do not have SYN flag (or have the SYN + ACK flag set)
+// will be silently dropped.
+func (pc *PacketCapturer) Capture() chan *Connection {
+	out := make(chan *Connection)
+	source := gopacket.NewPacketSource(pc.h, pc.h.LinkType())
+	go func() {
+		for {
+			packet, err := source.NextPacket()
+			if err == io.EOF {
+				close(out)
+				break
+			} else if err != nil {
+				log.Warningf("error reading packet: %v", err)
+				log.Warning("skipping...")
+				continue
+			}
+			parsedTCP := &Connection{
+				Src: &net.TCPAddr{},
+				Dst: &net.TCPAddr{},
+			}
+
+			if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
+				tcp, _ := tcpLayer.(*layers.TCP)
+				// This shouldn't happen as the capturer isn't configured to
+				// capture anything but SYN packets. The BPF Filter is applied
+				// even on pcap files that may have been generated with
+				// different filters.
+				if !tcp.SYN || tcp.ACK {
+					log.Warning("packet is not TCP with SYN flag, skipping...")
+					continue
+				}
+				parsedTCP.Src.Port = int(tcp.SrcPort)
+				parsedTCP.Dst.Port = int(tcp.DstPort)
+			}
+			if ipv6Layer := packet.Layer(layers.LayerTypeIPv6); ipv6Layer != nil {
+				ip6, _ := ipv6Layer.(*layers.IPv6)
+				parsedTCP.Src.IP = ip6.SrcIP
+				parsedTCP.Dst.IP = ip6.DstIP
+			}
+			if ipv4Layer := packet.Layer(layers.LayerTypeIPv4); ipv4Layer != nil {
+				ip4, _ := ipv4Layer.(*layers.IPv4)
+				parsedTCP.Src.IP = ip4.SrcIP
+				parsedTCP.Dst.IP = ip4.DstIP
+			}
+
+			if parsedTCP.Src.IP != nil && parsedTCP.Dst.Port != 0 {
+				out <- parsedTCP
+			}
+
+		}
+	}()
+	return out
 }
 
 // Close closes the underlying pcap handle. It will always return a nil error.

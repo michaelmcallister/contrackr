@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "engine",
@@ -6,7 +6,6 @@ go_library(
         "capturer.go",
         "engine.go",
         "iptables.go",
-        "parser.go",
         "tracker.go",
     ],
     importpath = "github.com/michaelmcallister/contrackr/pkg/contrackr/engine",
@@ -18,4 +17,12 @@ go_library(
         "@com_github_google_gopacket//layers",
         "@com_github_google_gopacket//pcap",
     ],
+)
+
+go_test(
+    name = "engine_test",
+    srcs = ["capturer_test.go"],
+    data = glob(["testdata/**"]),
+    embed = [":engine"],
+    deps = ["@com_github_google_go_cmp//cmp:go_default_library"],
 )

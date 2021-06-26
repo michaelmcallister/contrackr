@@ -2,7 +2,6 @@ package engine
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"time"
 
@@ -14,10 +13,10 @@ const (
 	trackerEntryTTL    = 1 * time.Minute
 )
 
-// Parser defines the contract for parsing arbitary bytes and extracting
-// connections. It is seperated from the packet capturer for testability.
-type Parser interface {
-	Parse() (*Connection, error)
+// CaptureCloser defines the contract for capturing packets from an interface.
+type CaptureCloser interface {
+	Capture() chan *Connection
+	Close() error
 }
 
 // BlockCloser defines the contract for blocking IP addresses on the host.
@@ -36,8 +35,7 @@ type Adder interface {
 // Engine contains the methods for running the connection tracker and blocker.
 type Engine struct {
 	c        chan *Connection
-	capturer io.ReadCloser
-	parser   Parser
+	capturer CaptureCloser
 	firewall BlockCloser
 	tracker  Adder
 }
@@ -55,7 +53,6 @@ func New(deviceName string) (*Engine, error) {
 	}
 	return &Engine{
 		capturer: cap,
-		parser:   newPacketParser(cap),
 		firewall: fw,
 		tracker:  newTracker(trackerEntryTTL, minimumPortScanned),
 	}, nil
@@ -63,20 +60,7 @@ func New(deviceName string) (*Engine, error) {
 
 // Run will monitor and block source IPs that attempt to port scan on the device.
 func (e *Engine) Run() {
-	e.c = make(chan *Connection)
-	go func() {
-		for {
-			pkt, err := e.parser.Parse()
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				log.Warningf("Error parsing packet: %v", err)
-				log.Warning("Continuing...")
-			}
-			e.c <- pkt
-		}
-	}()
+	e.c = e.capturer.Capture()
 	go func() {
 		for v := range e.tracker.PortScanners() {
 			var ports []int
