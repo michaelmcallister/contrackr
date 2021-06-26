@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Generate coverage profile
-    - run: go test -race -coverprofile=coverage.txt -covermode=atomic ./... 
+      run: go test -race -coverprofile=coverage.txt -covermode=atomic ./... 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
