@@ -37,7 +37,6 @@ type Adder interface {
 
 // Engine contains the methods for running the connection tracker and blocker.
 type Engine struct {
-	c        chan *Connection
 	capturer CaptureCloser
 	firewall BlockCloser
 	tracker  Adder
