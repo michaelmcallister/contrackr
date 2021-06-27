@@ -1,0 +1,41 @@
+---
+name: "tagged-release"
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  gh_tagged_release:
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout source code"
+        uses: "actions/checkout@v2.3.4"
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - uses: bazelbuild/setup-bazelisk@v1
+      - name: Mount bazel cache
+        uses: actions/cache@v2
+        with:
+          path: "~/.cache/bazel"
+          # TODO(michaelmcallister): not sure what key to use here, things might
+          # break if it gets executed on multiple hosts.
+          key: ${{ runner.os }}-bazel
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install libpcap-dev
+      # Build the binary
+      - run: bazel build //cmd:contrackr
+      # Build the Docker layer
+      - run: bazel build :contrackr_image //cmd:contrackr
+
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          prerelease: false
+          files: |
+            LICENSE.txt
+            bazel-bin/contrackr_image-layer.tar
+            bazel-bin/cmd/contrackr_/contrackr
+        id: "automatic_releases"
