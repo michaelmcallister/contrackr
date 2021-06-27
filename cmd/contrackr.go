@@ -2,24 +2,44 @@ package main
 
 import (
 	"flag"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/michaelmcallister/contrackr/pkg/contrackr/engine"
 
 	log "github.com/golang/glog"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var captureInterface string
+var (
+	captureInterface string
+	metricsAddr      string
+)
+
+var (
+	connectionsTracked = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "contrackr_tracked_connections",
+		Help: "The current number of tracked requests",
+	})
+)
 
 func init() {
 	const (
 		defaultIface = "eth0"
-		usage        = "network interface to capture"
+		ifaceUsage   = "network interface to capture"
+
+		defaultMetricsAddr = ":2112"
+		metricsUsage       = "the addr to listen on for metrics"
 	)
-	flag.StringVar(&captureInterface, "interface", defaultIface, usage)
-	flag.StringVar(&captureInterface, "i", defaultIface, usage)
+	flag.StringVar(&captureInterface, "interface", defaultIface, ifaceUsage)
+	flag.StringVar(&captureInterface, "i", defaultIface, ifaceUsage)
+	flag.StringVar(&metricsAddr, "port", defaultMetricsAddr, metricsUsage)
+	flag.StringVar(&metricsAddr, "p", defaultMetricsAddr, metricsUsage)
 }
 
 func main() {
@@ -42,6 +62,16 @@ func main() {
 		os.Exit(1)
 	}()
 
+	go func() {
+		for {
+			st := eng.Stats()
+			connectionsTracked.Set(float64(st.TotalConnections))
+			time.Sleep(2 * time.Second)
+		}
+	}()
+
 	log.Info("Running...")
-	eng.Run()
+	go eng.Run()
+	http.Handle("/metrics", promhttp.Handler())
+	http.ListenAndServe(metricsAddr, nil)
 }

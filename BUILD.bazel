@@ -23,6 +23,8 @@ container_image(
         "./contrackr",
         "-logtostderr=true",
     ],
+    # This is ignored when running in host network mode.
+    ports = ["2112"],
     files = ["//cmd:contrackr"],
     symlinks = {
         "/usr/sbin/iptables": "/usr/sbin/iptables-legacy",

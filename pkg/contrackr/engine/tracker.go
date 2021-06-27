@@ -63,6 +63,7 @@ func (t *Tracker) Add(v *Connection) {
 	// port scanner could scan up to 2 ports * N IP addresses on the interface.
 	// If it's any Dst IP address, change the key to simply be the Src IP.
 	key := fmt.Sprintf("[%s]>[%s]", v.Src.IP, v.Dst.IP)
+	log.V(2).Infof("Tracking entry %s - > %s", v.Src, v.Dst)
 	_, ok := t.m[key]
 	if !ok {
 		t.m[key] = &TrackerEntry{
@@ -74,6 +75,7 @@ func (t *Tracker) Add(v *Connection) {
 	}
 	t.m[key].Ports[v.Dst.Port]++
 	if len(t.m[key].Ports) >= t.minimumPortScanned {
+		log.V(2).Infof("%s scanned >= %d", key, t.minimumPortScanned)
 		t.portScanners <- t.m[key]
 	}
 	t.l.Unlock()
@@ -83,6 +85,21 @@ func (t *Tracker) Add(v *Connection) {
 // scan multiple ports.
 func (t *Tracker) PortScanners() chan *TrackerEntry {
 	return t.portScanners
+}
+
+// Connections returns the total number of currently tracked connections.
+// This includes each dst port, for instance if a single IP address scans
+// 3 ports on the host this would be counted as 3 connections. It also counts
+// the number of times the port was scanned, for instance if a single IP scans
+// port 80 five times the connections would be counted as 5.
+func (t *Tracker) Connections() int {
+	var count int
+	for _, v := range t.m {
+		for _, p := range v.Ports {
+			count += p
+		}
+	}
+	return count
 }
 
 func (t *Tracker) Close() {

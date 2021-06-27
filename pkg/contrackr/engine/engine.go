@@ -16,6 +16,10 @@ const (
 	evaluationInterval = 1 * time.Second
 )
 
+type Stats struct {
+	TotalConnections int
+}
+
 // CaptureCloser defines the contract for capturing packets from an interface.
 type CaptureCloser interface {
 	Capture() chan *Connection
@@ -33,6 +37,7 @@ type BlockCloser interface {
 type Adder interface {
 	Add(*Connection)
 	PortScanners() chan *TrackerEntry
+	Connections() int
 	Close()
 }
 
@@ -75,6 +80,15 @@ func (e *Engine) Run() {
 	}()
 	for pkt := range e.capturer.Capture() {
 		e.tracker.Add(pkt)
+	}
+}
+
+// Stats returns key metrics about the current running engine.
+func (e *Engine) Stats() *Stats {
+	// TODO(michaelmcallister): implement additional stats
+	// eg: number of IPs blocked
+	return &Stats{
+		TotalConnections: e.tracker.Connections(),
 	}
 }
 

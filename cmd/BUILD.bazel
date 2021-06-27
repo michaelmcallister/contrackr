@@ -10,6 +10,9 @@ go_library(
     deps = [
         "//pkg/contrackr/engine",
         "@com_github_golang_glog//:glog",
+        "@com_github_prometheus_client_golang//prometheus:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus/promhttp:go_default_library",
     ],
 )
 

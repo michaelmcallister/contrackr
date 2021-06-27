@@ -21,8 +21,15 @@ go_library(
 
 go_test(
     name = "engine_test",
-    srcs = ["capturer_test.go"],
+    srcs = [
+        "capturer_test.go",
+        "engine_test.go",
+        "tracker_test.go",
+    ],
     data = glob(["testdata/**"]),
     embed = [":engine"],
-    deps = ["@com_github_google_go_cmp//cmp:go_default_library"],
+    deps = [
+        "@com_github_google_go_cmp//cmp:go_default_library",
+        "@com_github_google_go_cmp//cmp/cmpopts:go_default_library",
+    ],
 )

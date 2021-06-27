@@ -17,7 +17,7 @@ import (
 const captureBytes = 80
 
 // bpfFilter is the BPF filter that is used to capture TCP SYN packets.
-// I did not know until writing this, but wireshark (libpcap?) does not support
+// I did not know until writing this, but libpcap does not support
 // the syntactic sugar that IPv4 does, so we must inspect the packet data.
 // We go 13 bytes into the TCP header + 40 bytes for the leading IPv6 header
 // and we check to see if the SYN flag is set.
@@ -42,7 +42,9 @@ const captureBytes = 80
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 // |                             data                              |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-const bpfFilter = "tcp[tcpflags] == tcp-syn or ip6[13+40]&0x2!=0"
+const bpfFilter = `tcp[tcpflags] &(tcp-syn) != 0 
+and tcp[tcpflags] &(tcp-ack) = 0 
+or (ip6[13+40]&0x2 != 0 and ip6[13+40]&0x10 = 0)`
 
 type Connection struct {
 	Src *net.TCPAddr
@@ -101,6 +103,9 @@ func newCapturer(devicename string) (*PacketCapturer, error) {
 	if err := h.SetDirection(pcap.DirectionIn); err != nil {
 		return nil, err
 	}
+	if err := h.SetBPFFilter(bpfFilter); err != nil {
+		return nil, err
+	}
 	return &PacketCapturer{h: h}, nil
 }
 
@@ -142,19 +147,6 @@ func (pc *PacketCapturer) Capture() chan *Connection {
 				Dst: &net.TCPAddr{},
 			}
 
-			if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
-				tcp, _ := tcpLayer.(*layers.TCP)
-				// This shouldn't happen as the capturer isn't configured to
-				// capture anything but SYN packets. The BPF Filter is applied
-				// even on pcap files that may have been generated with
-				// different filters.
-				if !tcp.SYN || tcp.ACK {
-					log.Warning("packet is not TCP with SYN flag, skipping...")
-					continue
-				}
-				parsedTCP.Src.Port = int(tcp.SrcPort)
-				parsedTCP.Dst.Port = int(tcp.DstPort)
-			}
 			if ipv6Layer := packet.Layer(layers.LayerTypeIPv6); ipv6Layer != nil {
 				ip6, _ := ipv6Layer.(*layers.IPv6)
 				parsedTCP.Src.IP = ip6.SrcIP
@@ -164,6 +156,21 @@ func (pc *PacketCapturer) Capture() chan *Connection {
 				ip4, _ := ipv4Layer.(*layers.IPv4)
 				parsedTCP.Src.IP = ip4.SrcIP
 				parsedTCP.Dst.IP = ip4.DstIP
+			}
+			if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
+				tcp, _ := tcpLayer.(*layers.TCP)
+				// This shouldn't happen as the capturer isn't configured to
+				// capture anything but SYN packets. The BPF Filter is applied
+				// even on pcap files that may have been generated with
+				// different filters.
+				if !tcp.SYN || tcp.ACK {
+					log.Warning("packet is not TCP with SYN flag")
+					m := "%s:%d -> %s:%d(SYN:%t, ACK:%t)"
+					log.V(2).Infof(m, parsedTCP.Src.IP, tcp.SrcPort, parsedTCP.Dst.IP, tcp.DstPort, tcp.SYN, tcp.ACK)
+					continue
+				}
+				parsedTCP.Src.Port = int(tcp.SrcPort)
+				parsedTCP.Dst.Port = int(tcp.DstPort)
 			}
 
 			if parsedTCP.Src.IP != nil && parsedTCP.Dst.Port != 0 {
@@ -178,6 +185,7 @@ func (pc *PacketCapturer) Capture() chan *Connection {
 // Close closes the underlying pcap handle. It will always return a nil error.
 // Attempting to read after closing is discouraged.
 func (pc *PacketCapturer) Close() error {
+	// This will close the underlying channel as well.
 	if pc != nil {
 		pc.h.Close()
 	}

@@ -24,16 +24,25 @@ func (fb *fakeBlocker) Close() error {
 
 // fakeTracker implements the Adder interface.
 type fakeTracker struct {
-	tc chan *TrackerEntry
+	tracking int
+	tc       chan *TrackerEntry
 }
 
 // Add is a no-op.
-func (ft *fakeTracker) Add(_ *Connection) {}
+func (ft *fakeTracker) Add(_ *Connection) {
+	ft.tracking++
+}
 
 // PortScanners returns the channel that callers can recieve as soon as a
 // "port scanner" is identified.
 func (ft *fakeTracker) PortScanners() chan *TrackerEntry {
 	return ft.tc
+}
+
+// Count returns how many connections are being tracked. This instance tracks
+// them forever, until manually cleared.
+func (ft *fakeTracker) Connections() int {
+	return ft.tracking
 }
 
 // Close closes the underlying channel.
