@@ -74,11 +74,11 @@ func (b *Blocker) Block(v *net.IP) error {
 func (b *Blocker) Close() error {
 	var closeErr error
 	for _, i := range []*iptables.IPTables{b.iptables, b.ip6tables} {
-		if err := i.ClearAndDeleteChain(defaultTable, contrackrChain); err != nil {
-			closeErr = fmt.Errorf("deleting chain: %v", err)
-		}
 		if err := i.DeleteIfExists(defaultTable, inputChain, jumpRuleSpec...); err != nil {
 			closeErr = fmt.Errorf("deleting jump rule: %v: %w", err, closeErr)
+		}
+		if err := i.ClearAndDeleteChain(defaultTable, contrackrChain); err != nil {
+			closeErr = fmt.Errorf("deleting chain: %v", err)
 		}
 	}
 	return closeErr
