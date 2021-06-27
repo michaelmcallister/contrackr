@@ -47,7 +47,7 @@ $ pacman -Syu libpcap-dev
 
 ## With Bazel (optional if not using Docker)
 
-### Installing Bazel
+**Installing Bazel**
 If you do not have Bazel installed, the easiest way to install is via
 [Bazelisk](https://github.com/bazelbuild/bazelisk), which is a user-friendly
 launcher for Bazel. To install Bazelisk you have a few options:
@@ -59,11 +59,7 @@ launcher for Bazel. To install Bazelisk you have a few options:
 
 It's also in the AUR (I use Arch btw)
 
-### Building
-
-#### Binary
-
-##### Bazel
+**Building Binary**
 Run bazel build for the binary target
 ```
 $ bazel build //cmd:contrackr 
@@ -73,10 +69,10 @@ The resulting binary will be available in the below path under `bazel-bin/`
 $ bazel-bin/cmd/contrackr_/contrackr 
 ```
 
-##### Go Tools
+## Using Go
 Simply run `$ go build cmd/contrackr.go` the binary will be in the current working directory as `contrackr`
 
-#### Docker Container
+## Building Docker Container
 
 Bazel will build a Docker image tarball that is suitable for importing via 
 `docker import`
@@ -114,7 +110,7 @@ You can also supply `-i any` to listen on any interface.
 
 For logging add the `-logtostderr=true` flag, and if need be increase the verbosity with `-v 2`
 
-#### Running as non-root
+*Running as non-root*
 
 As contrackr uses iptables to manipulate the host firewall it requires root. There are possible workarounds as [documented here](https://dbpilot.net/2018/3-ways-to-run-iptables-l-as-non-root-user/)
 
