@@ -94,11 +94,13 @@ func (t *Tracker) PortScanners() chan *TrackerEntry {
 // port 80 five times the connections would be counted as 5.
 func (t *Tracker) Connections() int {
 	var count int
+	t.l.Lock()
 	for _, v := range t.m {
 		for _, p := range v.Ports {
 			count += p
 		}
 	}
+	t.l.Unlock()
 	return count
 }
 

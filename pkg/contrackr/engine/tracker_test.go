@@ -21,11 +21,13 @@ func TestAdding(t *testing.T) {
 		maxAge             time.Duration
 		in                 []*Connection
 		want               []*TrackerEntry
+		wantConnections    int
 	}{
 		{
 			desc:               "test 3 connections considered a port scanner",
 			minimumPortScanned: 3,
 			maxAge:             time.Minute,
+			wantConnections:    3,
 			in: []*Connection{
 				{
 					Src: &net.TCPAddr{
@@ -126,6 +128,11 @@ func TestAdding(t *testing.T) {
 
 			if diff := cmp.Diff(tC.want, got, cmpopts.IgnoreUnexported(TrackerEntry{})); diff != "" {
 				t.Errorf("PortScanners() mismatch (-want +got):\n%s", diff)
+			}
+
+			c := tkr.Connections()
+			if c != tC.wantConnections {
+				t.Errorf("tkr.Connections() = %d, want connections = %d", c, tC.wantConnections)
 			}
 		})
 	}
