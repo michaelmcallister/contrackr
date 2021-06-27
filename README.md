@@ -130,5 +130,17 @@ $ docker run --net=host --cap-add=NET_ADMIN -t bazel:contrackr_image -i wlp3s0
 
 This will capture packets from the host, and manipulate iptables as appropriate.
 
+### Contributing
+
+Whilst it looks intimidating, the Bazel build rules are mostly managed by [Gazelle](https://github.com/bazelbuild/bazel-gazelle). It will take care of updating the `BUILD.bazel` files for you. You do not need to install any dependencies other than Bazel.
+ 
+If you change any dependencies within Go, simply run:
+
+```
+$ bazel run //:gazelle -- update 
+```
+
+When you submit a PR the [CI/CD pipeline](https://github.com/michaelmcallister/contrackr/actions/workflows/ci.yml) will ensure it builds and tests correctly.
+
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
