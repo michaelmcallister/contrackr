@@ -74,6 +74,6 @@ func main() {
 	go eng.Run()
 	http.Handle("/metrics", promhttp.Handler())
 	if err := http.ListenAndServe(metricsAddr, nil); err != nil {
-		log.Error("unable to serve metrics handler: %v", err)
+		log.Error("unable to serve metrics handler: ", err)
 	}
 }
