@@ -24,10 +24,10 @@ func TestAdding(t *testing.T) {
 		wantConnections    int
 	}{
 		{
-			desc:               "test 3 connections considered a port scanner",
+			desc:               "test 4 connections considered a port scanner",
 			minimumPortScanned: 3,
 			maxAge:             time.Minute,
-			wantConnections:    3,
+			wantConnections:    4,
 			in: []*Connection{
 				{
 					Src: &net.TCPAddr{
@@ -59,12 +59,22 @@ func TestAdding(t *testing.T) {
 						Port: 9,
 					},
 				},
+				{
+					Src: &net.TCPAddr{
+						IP:   srcIP,
+						Port: 41832,
+					},
+					Dst: &net.TCPAddr{
+						IP:   dstIP,
+						Port: 80,
+					},
+				},
 			},
 			want: []*TrackerEntry{
 				{
 					DstIP: &dstIP,
 					SrcIP: &srcIP,
-					Ports: map[int]int{1992: 1, 7: 1, 9: 1},
+					Ports: map[int]int{7: 1, 9: 1, 1992: 1, 80: 1},
 				},
 			},
 		},
