@@ -14,7 +14,7 @@
 
 
 ## Intro
-This is a simple server that listens for incoming TCP connections and blocks source IPs that attempt to connect to 3 different ports within a minute. It uses iptables as the firewall.
+This is a simple server that listens for incoming TCP connections and blocks source IPs that attempt to connect to more than 3 different ports within a minute. It uses iptables as the firewall.
 
 ## Dependencies
 

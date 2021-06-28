@@ -74,8 +74,8 @@ func (t *Tracker) Add(v *Connection) {
 		}
 	}
 	t.m[key].Ports[v.Dst.Port]++
-	if len(t.m[key].Ports) >= t.minimumPortScanned {
-		log.V(2).Infof("%s scanned >= %d", key, t.minimumPortScanned)
+	if len(t.m[key].Ports) > t.minimumPortScanned {
+		log.V(2).Infof("%s scanned > %d", key, t.minimumPortScanned)
 		t.portScanners <- t.m[key]
 	}
 	t.l.Unlock()
