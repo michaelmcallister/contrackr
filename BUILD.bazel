@@ -1,5 +1,4 @@
 load("@bazel_gazelle//:def.bzl", "gazelle")
-load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@package_bundle//file:packages.bzl", "packages")
 
@@ -23,9 +22,9 @@ container_image(
         "./contrackr",
         "-logtostderr=true",
     ],
+    files = ["//cmd:contrackr"],
     # This is ignored when running in host network mode.
     ports = ["2112"],
-    files = ["//cmd:contrackr"],
     symlinks = {
         "/usr/sbin/iptables": "/usr/sbin/iptables-legacy",
         "/usr/sbin/ip6tables": "/usr/sbin/ip6tables-legacy",

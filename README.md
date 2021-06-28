@@ -31,6 +31,26 @@ Arch:
 $ pacman -Syu iptables libpcap
 ```
 
+## Installing
+
+If you'd like to install the latest release you have two options:
+
+**Prebuilt Linux binary**
+
+You can find the binary for the latest release below:
+- https://github.com/michaelmcallister/contrackr/releases/download/latest/contrackr
+
+Please note that this binary is not statically linked, you will still need libpcap.
+
+**Docker Image**
+
+Run the following command to import the Docker filesystem image:
+
+```
+$ wget https://github.com/michaelmcallister/contrackr/releases/download/latest/contrackr_image.tar
+$ docker load -i contrackr_image.tar    
+```
+
 ## Building
 
 You will need libpcap header files to build with either Bazel, or Go to install them
@@ -45,9 +65,10 @@ Arch:
 $ pacman -Syu libpcap-dev
 ```
 
-## With Bazel (optional if not using Docker)
+## With Bazel (optional if not building Docker image)
 
 **Installing Bazel**
+
 If you do not have Bazel installed, the easiest way to install is via
 [Bazelisk](https://github.com/bazelbuild/bazelisk), which is a user-friendly
 launcher for Bazel. To install Bazelisk you have a few options:
@@ -60,6 +81,7 @@ launcher for Bazel. To install Bazelisk you have a few options:
 It's also in the AUR (I use Arch btw)
 
 **Building Binary**
+
 Run bazel build for the binary target
 ```
 $ bazel build //cmd:contrackr 
@@ -70,7 +92,11 @@ $ bazel-bin/cmd/contrackr_/contrackr
 ```
 
 ## Using Go
-Simply run `$ go build cmd/contrackr.go` the binary will be in the current working directory as `contrackr`
+Simply run 
+
+`$ go build cmd/contrackr.go` 
+
+the binary will be in the current working directory as `contrackr`
 
 ## Building Docker Container
 
@@ -141,6 +167,16 @@ $ bazel run //:gazelle -- update
 ```
 
 When you submit a PR the [CI/CD pipeline](https://github.com/michaelmcallister/contrackr/actions/workflows/ci.yml) will ensure it builds and tests correctly.
+
+## Common Issues
+
+If you run into an error like below:
+
+```
+can't initialize ip6tables table `filter': Table does not exist (do you need to insmod?)
+```
+
+Make sure you run `sudo modprobe ip6table_filter`
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
