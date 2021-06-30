@@ -63,7 +63,7 @@ func (t *Tracker) Add(v *Connection) {
 	// port scanner could scan up to 2 ports * N IP addresses on the interface.
 	// If it's any Dst IP address, change the key to simply be the Src IP.
 	key := fmt.Sprintf("[%s]>[%s]", v.Src.IP, v.Dst.IP)
-	log.V(2).Infof("Tracking entry %s - > %s", v.Src, v.Dst)
+	log.V(2).Infof("Tracking entry %s -> %s", v.Src, v.Dst)
 	_, ok := t.m[key]
 	if !ok {
 		t.m[key] = &TrackerEntry{

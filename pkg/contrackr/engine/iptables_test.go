@@ -10,15 +10,17 @@ import (
 
 // fakeIptables keeps a list of methods and the order they were executed in.
 type fakeIptables struct {
+	chainSetup       bool
 	commandsExecuted []string
 }
 
 func (fi *fakeIptables) ChainExists(table, chain string) (bool, error) {
 	fi.commandsExecuted = append(fi.commandsExecuted, fmt.Sprintf("ChainExists(%s, %s)", table, chain))
-	return false, nil
+	return fi.chainSetup, nil
 }
 
 func (fi *fakeIptables) NewChain(table, chain string) error {
+	fi.chainSetup = true
 	fi.commandsExecuted = append(fi.commandsExecuted, fmt.Sprintf("NewChain(%s, %s)", table, chain))
 	return nil
 }
@@ -58,17 +60,21 @@ func TestBlockIpv4(t *testing.T) {
 
 	wantv4 := []string{
 		"ChainExists(filter, contrackr)",
+		"ChainExists(filter, contrackr)",
 		"NewChain(filter, contrackr)",
 		"Insert(filter, INPUT, 1, [-m state --state NEW -j contrackr])",
 		"AppendUnique(filter, contrackr, [-s 127.0.0.1 -j DROP])",
+		"ChainExists(filter, contrackr)",
 		"DeleteIfExists(filter, INPUT, [-m state --state NEW -j contrackr])",
 		"ClearAndDeleteChain(filter, contrackr)",
 	}
 
 	wantv6 := []string{
 		"ChainExists(filter, contrackr)",
+		"ChainExists(filter, contrackr)",
 		"NewChain(filter, contrackr)",
 		"Insert(filter, INPUT, 1, [-m state --state NEW -j contrackr])",
+		"ChainExists(filter, contrackr)",
 		"DeleteIfExists(filter, INPUT, [-m state --state NEW -j contrackr])",
 		"ClearAndDeleteChain(filter, contrackr)",
 	}
@@ -93,17 +99,21 @@ func TestBlockIpv6(t *testing.T) {
 
 	wantv4 := []string{
 		"ChainExists(filter, contrackr)",
+		"ChainExists(filter, contrackr)",
 		"NewChain(filter, contrackr)",
 		"Insert(filter, INPUT, 1, [-m state --state NEW -j contrackr])",
+		"ChainExists(filter, contrackr)",
 		"DeleteIfExists(filter, INPUT, [-m state --state NEW -j contrackr])",
 		"ClearAndDeleteChain(filter, contrackr)",
 	}
 
 	wantv6 := []string{
 		"ChainExists(filter, contrackr)",
+		"ChainExists(filter, contrackr)",
 		"NewChain(filter, contrackr)",
 		"Insert(filter, INPUT, 1, [-m state --state NEW -j contrackr])",
 		"AppendUnique(filter, contrackr, [-s 2001:4860:4860::8888 -j DROP])",
+		"ChainExists(filter, contrackr)",
 		"DeleteIfExists(filter, INPUT, [-m state --state NEW -j contrackr])",
 		"ClearAndDeleteChain(filter, contrackr)",
 	}

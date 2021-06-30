@@ -55,6 +55,11 @@ func newBlocker() (*Blocker, error) {
 }
 
 func (b *Blocker) init() error {
+	// Incase Close() wasn't called last time, let's clear any rules before
+	// setup.
+	if err := b.clear(); err != nil {
+		return err
+	}
 	for _, i := range []iptable{b.ip4tables, b.ip6tables} {
 		// Create our own chain if it doesn't exist.
 		ok, err := i.ChainExists(defaultTable, contrackrChain)
@@ -84,16 +89,27 @@ func (b *Blocker) Block(v *net.IP) error {
 	return b.ip4tables.AppendUnique(defaultTable, contrackrChain, rule...)
 }
 
-// Close will cleanup the firewall rules that were created during instantiation.
-func (b *Blocker) Close() error {
+func (b *Blocker) clear() error {
 	var closeErr error
 	for _, i := range []iptable{b.ip4tables, b.ip6tables} {
-		if err := i.DeleteIfExists(defaultTable, inputChain, jumpRuleSpec...); err != nil {
-			closeErr = fmt.Errorf("deleting jump rule: %v: %w", err, closeErr)
+		ok, err := i.ChainExists(defaultTable, contrackrChain)
+		if err != nil {
+			closeErr = fmt.Errorf("chain exists: %v", err)
 		}
-		if err := i.ClearAndDeleteChain(defaultTable, contrackrChain); err != nil {
-			closeErr = fmt.Errorf("deleting chain: %v", err)
+		if ok {
+			if err := i.DeleteIfExists(defaultTable, inputChain, jumpRuleSpec...); err != nil {
+				closeErr = fmt.Errorf("deleting jump rule: %v: %w", err, closeErr)
+			}
+			
+			if err := i.ClearAndDeleteChain(defaultTable, contrackrChain); err != nil {
+				closeErr = fmt.Errorf("deleting chain: %v", err)
+			}
 		}
 	}
 	return closeErr
+}
+
+// Close will cleanup the firewall rules that were created during instantiation.
+func (b *Blocker) Close() error {
+	return b.clear()
 }

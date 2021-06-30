@@ -79,6 +79,7 @@ func (e *Engine) Run() {
 		}
 	}()
 	for pkt := range e.capturer.Capture() {
+		log.Infof("New connection: %v -> %v", pkt.Src, pkt.Dst)
 		e.tracker.Add(pkt)
 	}
 }
