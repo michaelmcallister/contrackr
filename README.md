@@ -156,6 +156,16 @@ $ docker run --net=host --cap-add=NET_ADMIN -t bazel:contrackr_image -i wlp3s0
 
 This will capture packets from the host, and manipulate iptables as appropriate.
 
+### Monitoring
+
+By default an end point for prometheus to scrape is available on TCP port 2112 served at `/metrics`. You may change the address by supplying the `--port` or `-p` flag. 
+
+It will report the total amount of connections that are currently being tracked. 
+This includes each dst port, for instance if a single IP address scans
+3 ports on the host this would be counted as 3 connections. It also counts
+the number of times the port was scanned, for instance if a single IP scans
+port 80 five times the connections would be counted as 5.
+
 ### Contributing
 
 Whilst it looks intimidating, the Bazel build rules are mostly managed by [Gazelle](https://github.com/bazelbuild/bazel-gazelle). It will take care of updating the `BUILD.bazel` files for you. You do not need to install any dependencies other than Bazel.
